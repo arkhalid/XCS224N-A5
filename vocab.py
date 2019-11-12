@@ -129,8 +129,8 @@ class VocabEntry(object):
             char_ind_list.append(self.char2id['}'])
             return char_ind_list
 
-        words2charind = [[word2charindices(word) for word in sent] for sent in sents]
-        return words2charind
+        word_ids = [[word2charindices(word) for word in sent] for sent in sents]
+        return word_ids
 
         ### END YOUR CODE
 
@@ -161,8 +161,12 @@ class VocabEntry(object):
         ### TODO: 
         ###     Connect `words2charindices()` and `pad_sents_char()` which you've defined in 
         ###     previous parts
-        
 
+        word_ids = self.words2charindices(sents)
+        sents_padded = pad_sents_char(word_ids, self.char2id['<pad>'])
+        sents_padded_tensor = torch.tensor(sents_padded, dtype=torch.int, device=device)
+        sents_padded_tensor_reshaped = sents_padded_tensor.permute(1, 0, 2)
+        return sents_padded_tensor_reshaped
         ### END YOUR CODE
 
     def to_input_tensor(self, sents: List[List[str]], device: torch.device) -> torch.Tensor:
@@ -174,7 +178,7 @@ class VocabEntry(object):
 
         @returns sents_var: tensor of (max_sentence_length, batch_size)
         """
-        word_ids = self.words2indices(sents)
+        word_ids = self.words2charindices(sents)
         sents_t = pad_sents(word_ids, self['<pad>'])
         sents_var = torch.tensor(sents_t, dtype=torch.long, device=device)
         return torch.t(sents_var)

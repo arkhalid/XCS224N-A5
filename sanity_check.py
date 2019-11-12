@@ -7,6 +7,7 @@ sanity_check.py: sanity checks for assignment 5
 Usage:
     sanity_check.py 1a
     sanity_check.py 1b
+    sanity_check.py 1c
     sanity_check.py 1f
     sanity_check.py 2a
     sanity_check.py 2b
@@ -98,6 +99,36 @@ def question_1b_sanity_check():
         gold_padded_sentences, padded_sentences)
 
     print("Sanity Check Passed for Question 1b: Padding!")
+    print("-" * 80)
+
+
+def question_1c_sanity_check():
+    """ Sanity check for to_input_tensor_char() function.
+    """
+    print("-" * 80)
+    print("Running Sanity Check for Question 1c: To input tensor")
+    print("-" * 80)
+    vocab = VocabEntry()
+
+    print("Running test on a list of sentences")
+    sentences = [['Human:', 'What', 'do', 'we', 'want?'], ['Computer:', 'Natural', 'language', 'processing!'],
+                 ['Human:', 'When', 'do', 'we', 'want', 'it?'], ['Computer:', 'When', 'do', 'we', 'want', 'what?']]
+    word_ids = vocab.words2charindices(sentences)
+
+    padded_sentences = pad_sents_char(word_ids, 0)
+    gold_padded_sentences = torch.load('./sanity_check_en_es_data/gold_padded_sentences.pkl')
+    assert padded_sentences == gold_padded_sentences, "Sentence padding is incorrect: it should be:\n {} but is:\n{}".format(
+        gold_padded_sentences, padded_sentences)
+
+    batch_size = len(gold_padded_sentences)
+    max_sentence_length = len(gold_padded_sentences[0])
+    max_word_length = len(gold_padded_sentences[0][0])
+
+    padded_sentences_tensor = vocab.to_input_tensor_char(sentences, device=torch.device('cpu'))
+
+    assert (padded_sentences_tensor.size() == (max_sentence_length, batch_size, max_word_length))
+
+    print("Sanity Check Passed for Question 1c: To input tensor")
     print("-" * 80)
 
 
@@ -246,6 +277,8 @@ def main():
         question_1a_sanity_check()
     elif args['1b']:
         question_1b_sanity_check()
+    elif args['1c']:
+        question_1c_sanity_check()
     elif args['1f']:
         question_1f_sanity_check(model)
     elif args['2a']:
