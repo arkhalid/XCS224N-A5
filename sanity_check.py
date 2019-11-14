@@ -9,6 +9,7 @@ Usage:
     sanity_check.py 1b
     sanity_check.py 1c
     sanity_check.py 1d
+    sanity_check.py 1e
     sanity_check.py 1f
     sanity_check.py 2a
     sanity_check.py 2b
@@ -29,6 +30,7 @@ from nmt_model import NMT
 from utils import pad_sents_char
 from vocab import Vocab, VocabEntry
 from highway import Highway
+from cnn import CNN
 
 # ----------
 # CONSTANTS
@@ -155,6 +157,28 @@ def question_1d_sanity_check():
     hwy.w_gate.bias.data = torch.zeros(EMBED_SIZE)
     output = hwy(inp)
     assert (torch.all(torch.eq(output, torch.tensor([[1.5, 1.5, 1.5]]))))
+
+
+def question_1e_sanity_check():
+    """ Sanity check for CNN.
+    """
+    print("-" * 80)
+    print("Running Sanity Check for Question 1e: CNN")
+    print("-" * 80)
+    max_word_length = 21
+    char_emb_dim = EMBED_SIZE
+    word_emb_dim = 7
+    kernel_size = 5
+    inp = torch.zeros(BATCH_SIZE, char_emb_dim, max_word_length)
+    cnn = CNN(kernel_size, word_emb_dim, char_emb_dim, max_word_length)
+    output = cnn(inp)
+    output_expected_size = [BATCH_SIZE, word_emb_dim]
+    assert (list(
+        output.size()) == output_expected_size), "output shape is incorrect: it should be:\n {} but is:\n{}".format(
+        output_expected_size, list(output.size()))
+
+    print("Sanity Check Passed for Question 1e: CNN!")
+    print("-" * 80)
 
 
 def question_1f_sanity_check(model):
@@ -306,6 +330,8 @@ def main():
         question_1c_sanity_check()
     elif args['1d']:
         question_1d_sanity_check()
+    elif args['1e']:
+        question_1e_sanity_check()
     elif args['1f']:
         question_1f_sanity_check(model)
     elif args['2a']:
