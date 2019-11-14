@@ -8,6 +8,7 @@ Usage:
     sanity_check.py 1a
     sanity_check.py 1b
     sanity_check.py 1c
+    sanity_check.py 1d
     sanity_check.py 1f
     sanity_check.py 2a
     sanity_check.py 2b
@@ -27,6 +28,7 @@ from char_decoder import CharDecoder
 from nmt_model import NMT
 from utils import pad_sents_char
 from vocab import Vocab, VocabEntry
+from highway import Highway
 
 # ----------
 # CONSTANTS
@@ -130,6 +132,29 @@ def question_1c_sanity_check():
 
     print("Sanity Check Passed for Question 1c: To input tensor")
     print("-" * 80)
+
+
+def question_1d_sanity_check():
+    """ Sanity check for Highway Network.
+    """
+    print("-" * 80)
+    print("Running Sanity Check for Question 1d: Highway Network")
+    print("-" * 80)
+    inp = torch.zeros(BATCH_SIZE, EMBED_SIZE)
+    hwy = Highway(EMBED_SIZE, DROPOUT_RATE)
+    output = hwy(inp)
+    output_expected_size = [BATCH_SIZE, EMBED_SIZE]
+    assert (list(
+        output.size()) == output_expected_size), "output shape is incorrect: it should be:\n {} but is:\n{}".format(
+        output_expected_size, list(output.size()))
+
+    inp = torch.ones(1, EMBED_SIZE)
+    hwy.w_proj.weight.data = 2 * torch.eye(EMBED_SIZE)
+    hwy.w_proj.bias.data = torch.zeros(EMBED_SIZE)
+    hwy.w_gate.weight.data = torch.zeros((EMBED_SIZE, EMBED_SIZE))
+    hwy.w_gate.bias.data = torch.zeros(EMBED_SIZE)
+    output = hwy(inp)
+    assert (torch.all(torch.eq(output, torch.tensor([[1.5, 1.5, 1.5]]))))
 
 
 def question_1f_sanity_check(model):
@@ -279,6 +304,8 @@ def main():
         question_1b_sanity_check()
     elif args['1c']:
         question_1c_sanity_check()
+    elif args['1d']:
+        question_1d_sanity_check()
     elif args['1f']:
         question_1f_sanity_check(model)
     elif args['2a']:
