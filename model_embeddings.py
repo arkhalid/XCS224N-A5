@@ -36,6 +36,8 @@ class ModelEmbeddings(nn.Module):
         p_drop = 0.3
         kernel_size = 5
         pad_token_idx = vocab.char2id['<pad>']
+        self.vocab = vocab
+        self.embed_size = embed_size
         self.char_emb = nn.Embedding(len(vocab.char2id), char_emb_dim, pad_token_idx)
         self.cnn = CNN(kernel_size, embed_size, char_emb_dim, max_sentence_len)
         self.hwy = Highway(embed_size, p_drop)
