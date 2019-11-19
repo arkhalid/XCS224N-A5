@@ -26,7 +26,7 @@ def pad_sents_char(sents, char_pad_token):
     ### YOUR CODE HERE for part 1f
     ### TODO:
     ###     Perform necessary padding to the sentences in the batch similar to the pad_sents() 
-    ###     method below using the padding character from the arguments. You should ensure all 
+    ###     method below using the padding character from the arguments. You should ensure all
     ###     sentences have the same number of words and each word has the same number of 
     ###     characters. 
     ###     Set padding words to a `max_word_length` sized vector of padding characters.  
@@ -42,7 +42,7 @@ def pad_sents_char(sents, char_pad_token):
     def pad_word(word):
         padded_word = padding_word[:]
         word_len = min(len(word), max_word_length)
-        padded_word[0:word_len] = word
+        padded_word[0:word_len] = word[0:word_len]
         return padded_word
     max_sent_length = max(len(sent) for sent in sents)
     padding_word = max_word_length * [char_pad_token]
