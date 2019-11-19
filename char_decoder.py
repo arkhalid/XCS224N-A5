@@ -52,7 +52,7 @@ class CharDecoder(nn.Module):
         out_batch_first = out.permute(1, 0, 2)
         # shape (batch, seq_length, vocab_size)
         out_projected = self.char_output_projection(out_batch_first)
-        # shape (batch, seq_length, vocab_size)
+        # shape (seq_length, batch, seq_length, vocab_size)
         scores = out_projected.permute(1, 0, 2)
         return scores, dec_hidden
         
@@ -72,8 +72,23 @@ class CharDecoder(nn.Module):
         ###
         ### Hint: - Make sure padding characters do not contribute to the cross-entropy loss.
         ###       - char_sequence corresponds to the sequence x_1 ... x_{n+1} from the handout (e.g., <START>,m,u,s,i,c,<END>).
+        #
+        # generating inputs and targets
+        inp_char_seq = char_sequence[: -1, :]
+        target_out_seq = char_sequence[1:, :]
 
+        # shape (seq_length, batch, vocab_size), ((1, batch, hidden_size), (1, batch, hidden_size))
+        scores, dec_hidden = self.forward(inp_char_seq, dec_hidden)
 
+        # create target mask at padded locations
+        target_masks = (target_out_seq != self.target_vocab.char2id['<pad>']).float()
+
+        # calculate loss
+        log_softmax_scores = nn.functional.log_softmax(scores, dim=2)
+        loss_per_timestep = -1 * torch.gather(log_softmax_scores, index=target_out_seq.unsqueeze(2), dim=2).squeeze(2)
+        loss_per_timestep_masked = loss_per_timestep * target_masks
+        loss = loss_per_timestep_masked.sum()
+        return loss
         ### END YOUR CODE
 
     def decode_greedy(self, initialStates, device, max_length=21):

@@ -14,6 +14,7 @@ Usage:
     sanity_check.py 2a
     sanity_check.py 2b
     sanity_check.py 2c
+    sanity_check.py 2c2
     sanity_check.py 2d
 """
 import json
@@ -270,6 +271,19 @@ def question_2c_sanity_check(decoder):
     print("-" * 80)
 
 
+def question_2c2_sanity_check(decoder):
+    """ Sanity check for CharDecoder.train_forward()
+        basic shape check
+    """
+    print("-" * 80)
+    print("Running Sanity Check for Question 2c: CharDecoder.train_forward()")
+    print("-" * 80)
+    inpt = torch.tensor([[1], [5], [6], [4], [2], [0], [0], [0]], dtype=torch.long)
+    loss = decoder.train_forward(inpt)
+    assert (list(loss.size()) == []), "Loss should be a scalar but its shape is: {}".format(list(loss.size()))
+    print("Sanity Check Passed for Question 2c: CharDecoder.train_forward()!")
+    print("-" * 80)
+
 def question_2d_sanity_check(decoder):
     """ Sanity check for CharDecoder.decode_greedy()
         basic shape check
@@ -340,6 +354,8 @@ def main():
         question_2b_sanity_check(decoder, char_vocab)
     elif args['2c']:
         question_2c_sanity_check(decoder)
+    elif args['2c2']:
+        question_2c2_sanity_check(decoder)
     elif args['2d']:
         question_2d_sanity_check(decoder)
     else:
