@@ -8,8 +8,8 @@ import torch.nn as nn
 #   `Highway` in the file `highway.py`
 # Uncomment the following two imports once you're ready to run part 1(j)
 
-# from cnn import CNN
-# from highway import Highway
+from cnn import CNN
+from highway import Highway
 
 # End "do not change" 
 
@@ -31,8 +31,16 @@ class ModelEmbeddings(nn.Module):
         ## End A4 code
 
         ### YOUR CODE HERE for part 1j
-
-
+        char_emb_dim = 50
+        max_sentence_len = 21
+        p_drop = 0.3
+        kernel_size = 5
+        pad_token_idx = vocab.char2id['<pad>']
+        self.vocab = vocab
+        self.embed_size = embed_size
+        self.char_emb = nn.Embedding(len(vocab.char2id), char_emb_dim, pad_token_idx)
+        self.cnn = CNN(kernel_size, embed_size, char_emb_dim, max_sentence_len)
+        self.hwy = Highway(embed_size, p_drop)
         ### END YOUR CODE
 
     def forward(self, input):
@@ -51,6 +59,20 @@ class ModelEmbeddings(nn.Module):
 
         ### YOUR CODE HERE for part 1j
 
-
+        # shape (sentence_length, batch_size, max_word_length, char_emb_dim)
+        char_embedded = self.char_emb(input)
+        sentence_length, batch_size, max_word_length, char_emb_dim = list(char_embedded.size())
+        # shape (sentence_length, batch_size, char_emb_dim, max_word_length)
+        char_embedded_permuted = char_embedded.permute(0, 1, 3, 2)
+        # shape (sentence_length * batch_size, char_emb_dim, max_word_length)
+        char_embedded_permuted_flattened = char_embedded_permuted.reshape(sentence_length * batch_size,
+                                                                          char_emb_dim, max_word_length)
+        # shape(sentence_length * batch_size, word_emb_dim)
+        word_emb_flattened = self.cnn(char_embedded_permuted_flattened)
+        # shape(sentence_length * batch_size, word_emb_dim)
+        word_emb_flattened = self.hwy(word_emb_flattened)
+        # shape(sentence_length, batch_size, word_emb_dim)
+        word_embedded = word_emb_flattened.reshape(sentence_length, batch_size, -1)
+        return word_embedded
         ### END YOUR CODE
 
