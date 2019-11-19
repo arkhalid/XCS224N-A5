@@ -122,8 +122,10 @@ class CharDecoder(nn.Module):
         batch_size = list(initialStates[0].size())[1]
         prev_chars = self.target_vocab.char2id['{'] * torch.ones((1, batch_size), dtype=torch.long,
                                                                           device=device)
+        dec_hidden = initialStates
+        
         for t in range(max_length):
-            next_chars, dec_hidden = dec_step(prev_chars, initialStates)
+            next_chars, dec_hidden = dec_step(prev_chars, dec_hidden)
             words_for_batch.append(next_chars)
             prev_chars = next_chars
         words_for_batch = torch.cat(words_for_batch, dim=0)
