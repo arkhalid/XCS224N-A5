@@ -80,7 +80,7 @@ class CharDecoder(nn.Module):
         # shape (seq_length, batch, vocab_size), ((1, batch, hidden_size), (1, batch, hidden_size))
         scores, dec_hidden = self.forward(inp_char_seq, dec_hidden)
 
-        # create target mask at padded locations
+        # create target mask at padded locations - shape (seq_length, )
         target_masks = (target_out_seq != self.target_vocab.char2id['<pad>']).float()
 
         # calculate loss
@@ -108,7 +108,34 @@ class CharDecoder(nn.Module):
         ###      - Use torch.tensor(..., device=device) to turn a list of character indices into a tensor.
         ###      - We use curly brackets as start-of-word and end-of-word characters. That is, use the character '{' for <START> and '}' for <END>.
         ###        Their indices are self.target_vocab.start_of_word and self.target_vocab.end_of_word, respectively.
-        
-        
+
+        def dec_step(prev_chars, dec_hidden):
+            """Run decoder for one step for all chars in batch
+            @param prev_chars (torch.Tensor): characters decoded in prev step. Tensor of shape (1, batch_size)
+            @param dec_hidden (torch.Tensor): previous hidden state of decoder LSTM """
+
+            scores, dec_hidden = self.forward(prev_chars, dec_hidden)
+            next_chars = scores.argmax(dim=-1)
+            return next_chars, dec_hidden
+
+        words_for_batch = []
+        batch_size = list(initialStates[0].size())[1]
+        prev_chars = self.target_vocab.char2id['{'] * torch.ones((1, batch_size), dtype=torch.long,
+                                                                          device=device)
+        for t in range(max_length):
+            next_chars, dec_hidden = dec_step(prev_chars, initialStates)
+            words_for_batch.append(next_chars)
+            prev_chars = next_chars
+        words_for_batch = torch.cat(words_for_batch, dim=0)
+        words = []
+        for i in range(batch_size):
+            curr_word = ''
+            for j in range(max_length):
+                if words_for_batch[j][i] == self.target_vocab.char2id['}']:
+                    break
+                else:
+                    curr_word += self.target_vocab.id2char[int(words_for_batch[j][i])]
+            words.append(curr_word)
+        return words
         ### END YOUR CODE
 
