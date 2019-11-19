@@ -23,8 +23,11 @@ class CharDecoder(nn.Module):
         ### Hint: - Use target_vocab.char2id to access the character vocabulary for the target language.
         ###       - Set the padding_idx argument of the embedding matrix.
         ###       - Create a new Embedding layer. Do not reuse embeddings created in Part 1 of this assignment.
-        
-
+        super(CharDecoder, self).__init__()
+        self.charDecoder = nn.LSTM(char_embedding_size, hidden_size)
+        self.char_output_projection = nn.Linear(hidden_size, len(target_vocab.char2id), bias=True)
+        self.decoderCharEmb = nn.Embedding(len(target_vocab.char2id), char_embedding_size, target_vocab.char2id['<pad>'])
+        self.target_vocab = target_vocab
         ### END YOUR CODE
 
 
@@ -40,7 +43,18 @@ class CharDecoder(nn.Module):
         """
         ### YOUR CODE HERE for part 2b
         ### TODO - Implement the forward pass of the character decoder.
-        
+        # shape (seq_length, batch, char_emb_size)
+        input_embedded = self.decoderCharEmb(input)
+        # shape (seq_length, batch, hidden_size), ((1, batch, hidden_size), (1, batch, hidden_size))
+        out, dec_hidden = self.charDecoder(input_embedded, dec_hidden)
+
+        # shape (batch, seq_length, hidden_size)
+        out_batch_first = out.permute(1, 0, 2)
+        # shape (batch, seq_length, vocab_size)
+        out_projected = self.char_output_projection(out_batch_first)
+        # shape (seq_length, batch, seq_length, vocab_size)
+        scores = out_projected.permute(1, 0, 2)
+        return scores, dec_hidden
         
         ### END YOUR CODE 
 
@@ -58,8 +72,23 @@ class CharDecoder(nn.Module):
         ###
         ### Hint: - Make sure padding characters do not contribute to the cross-entropy loss.
         ###       - char_sequence corresponds to the sequence x_1 ... x_{n+1} from the handout (e.g., <START>,m,u,s,i,c,<END>).
+        #
+        # generating inputs and targets
+        inp_char_seq = char_sequence[: -1, :]
+        target_out_seq = char_sequence[1:, :]
 
+        # shape (seq_length, batch, vocab_size), ((1, batch, hidden_size), (1, batch, hidden_size))
+        scores, dec_hidden = self.forward(inp_char_seq, dec_hidden)
 
+        # create target mask at padded locations - shape (seq_length, )
+        target_masks = (target_out_seq != self.target_vocab.char2id['<pad>']).float()
+
+        # calculate loss
+        log_softmax_scores = nn.functional.log_softmax(scores, dim=2)
+        loss_per_timestep = -1 * torch.gather(log_softmax_scores, index=target_out_seq.unsqueeze(2), dim=2).squeeze(2)
+        loss_per_timestep_masked = loss_per_timestep * target_masks
+        loss = loss_per_timestep_masked.sum()
+        return loss
         ### END YOUR CODE
 
     def decode_greedy(self, initialStates, device, max_length=21):
@@ -79,7 +108,34 @@ class CharDecoder(nn.Module):
         ###      - Use torch.tensor(..., device=device) to turn a list of character indices into a tensor.
         ###      - We use curly brackets as start-of-word and end-of-word characters. That is, use the character '{' for <START> and '}' for <END>.
         ###        Their indices are self.target_vocab.start_of_word and self.target_vocab.end_of_word, respectively.
-        
-        
+
+        def dec_step(prev_chars, dec_hidden):
+            """Run decoder for one step for all chars in batch
+            @param prev_chars (torch.Tensor): characters decoded in prev step. Tensor of shape (1, batch_size)
+            @param dec_hidden (torch.Tensor): previous hidden state of decoder LSTM """
+
+            scores, dec_hidden = self.forward(prev_chars, dec_hidden)
+            next_chars = scores.argmax(dim=-1)
+            return next_chars, dec_hidden
+
+        words_for_batch = []
+        batch_size = list(initialStates[0].size())[1]
+        prev_chars = self.target_vocab.char2id['{'] * torch.ones((1, batch_size), dtype=torch.long,
+                                                                          device=device)
+        for t in range(max_length):
+            next_chars, dec_hidden = dec_step(prev_chars, initialStates)
+            words_for_batch.append(next_chars)
+            prev_chars = next_chars
+        words_for_batch = torch.cat(words_for_batch, dim=0)
+        words = []
+        for i in range(batch_size):
+            curr_word = ''
+            for j in range(max_length):
+                if words_for_batch[j][i] == self.target_vocab.char2id['}']:
+                    break
+                else:
+                    curr_word += self.target_vocab.id2char[int(words_for_batch[j][i])]
+            words.append(curr_word)
+        return words
         ### END YOUR CODE
 
